@@ -1,5 +1,6 @@
 import React from 'react';
 import { Switch, Route } from 'react-router-dom';
+import { connect } from 'react-redux';
 
 import './App.css';
 
@@ -8,37 +9,29 @@ import ShopPage from './pages/shop/shop.component';
 import Header from './components/header/header.component';
 import LoginPage from './pages/loginpage/loginpage.component';
 import { auth, createUserProfileDocument} from './firebase/firebase.utils';
+import { setCurrentUser } from './redux/user/user.actions';
 
 class App extends React.Component{
-  constructor() {
-    super();
-
-    this.state = {
-      currentUser: null
-    }
-  }
-
 unsubscribeFromAuth = null
 
 componentDidMount(){
-  this.unsubscribeFromAuth = auth.onAuthStateChanged(async userAuth => {
-    if (userAuth) {
-      const userRef = await createUserProfileDocument(userAuth);
+  const {setCurrentUser} = this.props;
 
-      userRef.onSnapshot(snapShot => {
-        this.setState(
-          {
-            currentUser: {
-            id: snapShot.id,
-            ...snapShot.data()
-            }
-          });
-          console.log(this.state);
+    this.unsubscribeFromAuth = auth.onAuthStateChanged(async userAuth => {
+      if (userAuth) {
+        const userRef = await createUserProfileDocument(userAuth);
+
+        userRef.onSnapshot(snapShot => {
+          setCurrentUser ({
+              id: snapShot.id,
+              ...snapShot.data()
+        })
       });
     }
+
+    setCurrentUser(userAuth);
   });
 }
-
 
 componentWillUnmount() {
   this.unsubscribeFromAuth();
@@ -47,7 +40,7 @@ componentWillUnmount() {
   render() {
     return (
       <div>
-        <Header currentUser={this.state.currentUser}/>
+        <Header/>
         <Switch>
           <Route exact path='/' component={HomePage}/>
           <Route path = '/shop' component={ShopPage}/>
@@ -58,4 +51,8 @@ componentWillUnmount() {
   }
 }
 
-export default App;
+const mapDispatchToProps = dispatch => ({
+  setCurrentUser: user => dispatch(setCurrentUser(user)) // Dispatch takes whatever is passed into it as an action object which is passed to every reducer
+})
+
+export default connect(null, mapDispatchToProps)(App);
